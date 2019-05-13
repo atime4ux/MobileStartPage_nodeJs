@@ -76,7 +76,7 @@ const saveSiteInfo = async (postData) => {
 
     if (postData.site_idx) {
       // 업데이트
-      const targetSite = jsonData.menu_site_info.filter(x => x.site_idx === Number(postData.site_idx))[0]
+      const targetSite = jsonData.site_info.filter(x => x.site_idx === Number(postData.site_idx))[0]
       targetSite.category_idx = Number(postData.category_idx)
       targetSite.name = postData.name
       targetSite.url = postData.url
@@ -86,7 +86,7 @@ const saveSiteInfo = async (postData) => {
       targetSite.update_date = Date.now()
     } else {
       // 인서트
-      const maxSiteIdx = jsonData.menu_site_info.reduce((acc, curr) => {
+      const maxSiteIdx = jsonData.site_info.reduce((acc, curr) => {
         return acc.site_idx > curr.site_idx ? acc : curr
       }).site_idx
 
@@ -103,11 +103,11 @@ const saveSiteInfo = async (postData) => {
       }
 
       console.log(newSiteInfo)
-      jsonData.menu_site_info.push(newSiteInfo)
+      jsonData.site_info.push(newSiteInfo)
     }
 
     // sort 값 정리
-    jsonData.menu_site_info
+    jsonData.site_info
       .filter(x => x.category_idx === postData.category_idx
         && x.sort >= postData.sort
         && x.name !== postData.name)
@@ -132,7 +132,7 @@ http.createServer(async (req, res) => {
       const siteIdx = Number(qs.parse(url.parse(req.url).query).siteIdx)
 
       const jsonData = await loadJsonData()
-      const siteInfo = jsonData.menu_site_info.filter(x => x.site_idx === siteIdx && publicYn === 'N')[0]
+      const siteInfo = jsonData.site_info.filter(x => x.site_idx === siteIdx && publicYn === 'N')[0]
 
       const contentType = getContentType('.json')
       const content = JSON.stringify(siteInfo)
@@ -160,12 +160,12 @@ http.createServer(async (req, res) => {
     // 전체 조회
     const jsonData = await loadJsonData()
     const publicYn = checkPublicYn(qs.parse(url.parse(req.url).query))
-    const categoryList = jsonData.menu_category_info
+    const categoryList = jsonData.category_info
       .filter(x => x.use_yn === 'Y' && (x.public_yn === publicYn || publicYn === 'N'))
       .sort((prev, next) => {
         return prev.sort - next.sort
       })
-    const siteList = jsonData.menu_site_info
+    const siteList = jsonData.site_info
       .filter(x => x.use_yn === 'Y' && categoryList.map(x => x.category_idx).includes(x.category_idx))
       .sort((prev, next) => {
         return prev.sort - next.sort
@@ -184,23 +184,23 @@ http.createServer(async (req, res) => {
   } else if (urlPath === '/clean') {
     const jsonData = await loadJsonData()
 
-    const categoryList = jsonData.menu_category_info.sort((prev, next) => {
+    const categoryList = jsonData.category_info.sort((prev, next) => {
       return Number(prev.sort) > Number(next.sort) ? prev : next
     })
     for (let i = 0; i < categoryList.length; i++) {
-      const cate = jsonData.menu_category_info.filter(x => Number(x.category_idx) === Number(categoryList[i].category_idx))[0]
+      const cate = jsonData.category_info.filter(x => Number(x.category_idx) === Number(categoryList[i].category_idx))[0]
       cate.category_idx = Number(cate.category_idx)
       cate.sort = (i + 1)
       cate.create_date = new Date(cate.create_date).valueOf()
       cate.update_date = new Date(cate.update_date).valueOf()
 
-      const siteList = jsonData.menu_site_info
+      const siteList = jsonData.site_info
         .filter(x => Number(x.category_idx) === cate.category_idx)
         .sort((prev, next) => {
           return Number(prev.sort) > Number(next.sort) ? prev : next
         })
       for (let j = 0; j < siteList.length; j++) {
-        const site = jsonData.menu_site_info.filter(x => Number(x.site_idx) === Number(siteList[j].site_idx))[0]
+        const site = jsonData.site_info.filter(x => Number(x.site_idx) === Number(siteList[j].site_idx))[0]
         site.category_idx = Number(site.category_idx)
         site.site_idx = Number(site.site_idx)
         site.sort = (j + 1)
@@ -227,5 +227,5 @@ http.createServer(async (req, res) => {
     responseEnd(res, contentType, content)
   }
 }).listen(config.listenPort, () => {
-  console.log('standby')
+  console.log(`${config.listenPort} standby`)
 })
