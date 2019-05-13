@@ -1,0 +1,486 @@
+<!DOCTYPE HTML PUBLIC "-//WAPFORUM//DTD XHTML Mobile 1.2//EN" "http://www.wapforum.org/DTD/xhtml-mobile12.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport"
+    content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width" />
+  <title>Mobile Start Page</title>
+  <style>
+    body {
+      font-size: 20px;
+      margin: 0 0 0 0;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+    span {
+      cursor: pointer;
+    }
+
+    ul {
+      margin-top: 0px;
+      margin-bottom: 0px;
+      padding-bottom: 0px;
+      padding-top: 0px;
+    }
+
+    li {
+      color: #a0a0a4;
+      padding-top: 5px;
+    }
+
+    img {
+      vertical-align: middle;
+    }
+
+    #divMain {
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      z-index: 1;
+    }
+
+    #divCategory {
+      position: absolute;
+      display: none;
+      bottom: 0px;
+      width: 100%;
+      height: 300px;
+      background-color: #f0f8ff;
+      z-index: 10;
+    }
+
+    #divEditSite {
+      position: absolute;
+      display: none;
+      top: 0px;
+      bottom: 0px;
+      width: 100%;
+      height: 100%;
+      background-color: #f0f8ff;
+      z-index: 10;
+    }
+
+    #divEditSite table {
+      width: 100%;
+    }
+
+    #divEditSite select {
+      width: 100%;
+    }
+
+    #divEditSite input {
+      width: 100%;
+    }
+
+    #divNewTab {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: #ff0000;
+      font-weight: bold;
+    }
+
+    #divSearch {
+      position: absolute;
+      top: 40px;
+      right: 10px;
+    }
+
+    .subCategory {
+      padding: 10px 0px 0px 10px;
+    }
+
+    .title {
+      color: #808080;
+      font-weight: bold;
+    }
+
+    .textbox {}
+
+    .disabled {
+      background-color: #F5F5F5
+    }
+  </style>
+  <style>
+    ul {
+      display: none;
+    }
+  </style>
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+  <script>
+    var Common = {
+      AddQueryString: function (postData) {
+        var queryString = window.location.search;
+        if (queryString[0] === '?') {
+          queryString = queryString.substring(1);
+        }
+
+        var arrQuery = queryString.split('&')
+        for (var i = 0; i < arrQuery.length; i++) {
+          var arrParam = arrQuery[i].split('=')
+          if (arrParam.length === 2) {
+            var paramKey = arrParam[0];
+            var paramValue = decodeURIComponent(arrParam[1]);
+            postData[paramKey] = paramValue;
+          }
+        }
+      },
+      GetPostData: function () {
+        var postData = {};
+
+        $(':input')
+          .not("#__EVENTTARGET, #__EVENTARGUMENT, #__LASTFOCUS, #__VIEWSTATE")
+          .each(function (index) {
+            if ($(this).val() != null) {
+              if ($(this).val().length > 0) {
+                var name = $(this).attr('name')
+                if (name == undefined) {
+                  name = $(this).attr('id')
+                }
+
+                postData[name] = $(this).val();
+              }
+            }
+          });
+
+        Common.AddQueryString(postData);
+
+        return postData;
+      },
+      CallAjax: function (target_url, method, postData, success_obj, fail_obj) {
+        $.ajax({
+          type: method,
+          cache: false,
+          async: true,
+          url: target_url,
+          data: postData,
+          success: function (data) {
+            if (success_obj != null && success_obj != undefined) {
+              success_obj.Run(data);
+            }
+            else {
+              return data;
+            }
+          },
+          error: function (data) {
+            if (fail_obj != null && fail_obj != undefined) {
+              fail_obj.Run(data);
+            }
+            else {
+              return data;
+            }
+          }
+        });
+      },
+      Ajax_Fail: {
+        Run: function (result) {
+            console.log(result)
+            alert('실패했습니다.');
+        },
+      }
+    }
+  </script>
+  <script type="text/javascript">
+    $(document).ready(function () {
+      $("#txtSearchWord").keydown(function (key) {
+        if (key.keyCode == 13) {
+          var search_word = $("#txtSearchWord").val();
+          $("#txtSearchWord").val('');
+          SearchGoogle(search_word);
+        }
+      });
+
+      GetData();
+    });
+    function GetData() {
+      var postData = {}
+      Common.AddQueryString(postData);
+      $.ajax({
+        type: "GET",
+        cache: false,
+        async: true,
+        url: '/list',
+        data: postData,
+        success: function (data) {
+          BindData(data)
+          $("#hdfCatId").val($("ul:first").attr("id"));
+        },
+        error: function (data) {
+          alert('로딩실패')
+        }
+      });
+    }
+    function BindData(data) {
+      var categoryList = data.categoryList;
+      var siteList = data.siteList;
+
+      for (var i = 0; i < categoryList.length; i++) {
+        var category = categoryList[i];
+        var categoryIdx = category.category_idx;
+
+        $('#ddlCategory').append('<option value="' + category.category_idx + '">' + category.name + '</option>');
+
+        var $category = $('<div class="subCategory"></div>')
+        $category.append('<span class="title" data-category-idx="' + categoryIdx + '"></span>');
+        $category.find('span.title').text(category.name)
+
+        if (i === 0) {
+          $category.append('<ul id="' + categoryIdx + '" style="display:block;"></ul>')
+        }
+        else {
+          $category.append('<ul id="' + categoryIdx + '"></ul>')
+        }
+
+        for (var j = 0; j < siteList.length; j++) {
+          if (siteList[j].category_idx === categoryIdx) {
+            var $ul = $category.find('ul')
+
+            var site = siteList[j];
+
+            var urlMobile = encodeURIComponent(site.url_mobile);
+            var url = encodeURIComponent(site.url);
+
+            var $li = $('<li></li>');
+            $li.append('<span id="site_' + site.site_idx + '" class="site" data-url-mobile="' + urlMobile + '" data-url="' + url + '" style="margin-right:20px">' + site.name + '</span>');
+            if (data.publicYn === 'N') {
+              $li.append('<span class="edit" data-site-idx="' + site.site_idx + '" style="cursor:pointer; margin-right:20px;">[수정]</span>');
+            }
+
+            $ul.append($li);
+          }
+        }
+
+        $('div.mainCategory').append($category);
+      }
+
+      $('.title').click((evt) => {
+        var $elem = $(evt.currentTarget);
+        var categoryIdx = $elem.data('categoryIdx');
+        ToggleDisplayProp(categoryIdx);
+      })
+      $('span.site').click((evt) => {
+        var $elem = $(evt.currentTarget);
+        var urlMobile = $elem.data('urlMobile');
+        var url = $elem.data('url');
+        MovePage(urlMobile, url);
+      })
+      $('span.edit').click((evt) => {
+        var $elem = $(evt.currentTarget);
+        var siteIdx = $elem.data('siteIdx');
+        GetSiteInfo(siteIdx);
+      })
+    }
+    function ExpandCategory(id) {
+      $("#hdfCatId").val(id);
+      $("#" + id).show(200, function () {
+        var offsetTop = ($("#" + id).offset().top * 1) - 30;
+        $('html, body').animate({
+          scrollTop: offsetTop
+        }, 200);
+      });
+    }
+    function ToggleDisplayProp(id) {
+      var cat_id_prev = $("#hdfCatId").val();
+
+      if ($("#" + cat_id_prev).length == 0) {
+        ExpandCategory(id);
+      }
+      else {
+        if (id == cat_id_prev) {
+          $("#" + cat_id_prev).hide();
+          $("#hdfCatId").val('');
+        }
+        else {
+          $("#" + cat_id_prev).hide();
+          ExpandCategory(id);
+        }
+      }
+    }
+    function IsMobile() {
+      var filter = "win16|win32|win64|mac";
+
+      if (navigator.platform) {
+        if (filter.indexOf(navigator.platform.toLowerCase()) >= 0) {
+          //데스크탑
+          return false;
+        }
+      }
+
+      return true;
+    }
+    function MovePage(mobileUrl, desktopUrl) {
+      if (IsMobile() == true) {
+        //window.open(mobileUrl);//크롬에 홈버튼 보이면서 그냥 페이지 이동으로 변경
+        document.location.href = mobileUrl;
+      }
+      else {
+        if (desktopUrl == undefined || desktopUrl == null || desktopUrl == '') {
+          desktopUrl = mobileUrl;
+        }
+        document.location.href = desktopUrl;
+      }
+    }
+    function NewTab() {
+      window.open('about:blank');
+    }
+    function ShowEditSiteArea() {
+      $("#divEditSite").css('display', 'block');
+    }
+    function HideEditSiteArea() {
+      $("#divEditSite").css('display', 'none');
+    }
+    function AddSiteInfo(category_id) {
+      $("#txtSiteIdx").val('');
+      $("#txtSiteName").val('');
+      $("#txtSiteUrl").val('');
+      $("#txtSiteUrlMobile").val('');
+      $("#txtSiteSort").val('');
+      $("#ddlUseYN").val('Y');
+      $("#ddlUseYN").attr('disabled', 'disabled');
+    }
+    function GetSiteInfo(siteIdx) {
+      ShowEditSiteArea();
+      $("#ddlUseYN").removeAttr('disabled');
+
+      var url = '/site?siteIdx=' + siteIdx;
+      var postData = Common.GetPostData();
+
+      Common.CallAjax(url, 'GET', postData, {
+        Run: function (data) {
+          if (data.site_idx != undefined && data.site_idx != null && data.site_idx != '') {
+            $("#ddlCategory").val(data.category_idx);
+            $("#txtSiteIdx").val(data.site_idx);
+            $("#txtSiteName").val(data.name);
+            $("#txtSiteUrl").val(data.url);
+            $("#txtSiteUrlMobile").val(data.url_mobile);
+            $("#txtSiteSort").val(data.sort);
+          }
+        }
+      }
+        , Common.Ajax_Fail);
+    }
+    function SaveSiteInfo() {
+      var url = '/site';
+      var postData = Common.GetPostData();
+      Common.CallAjax(url, 'POST', postData, {
+        Run: function (data) {
+          if (data == '') {
+            window.location.reload(true);
+          }
+          else {
+            Common.Ajax_Fail.Run(data);
+          }
+        }
+      }
+        , Common.Ajax_Fail);
+    }
+    function SearchGoogle(search_word) {
+      var url = "http://www.google.co.kr/cse";
+      var param = "?q=" + encodeURIComponent(search_word);
+
+      window.open(url + param);
+    }
+    var AddSite_Success = {
+      Run: function (data) {
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <div id="divMain">
+    <div id="divNewTab">
+      <span onclick="NewTab()">새탭 생성</span>
+    </div>
+    <div id="divSearch">
+      <input id="txtSearchWord" type="text" style="width:90px" />
+    </div>
+    <!--북마크섹션 시작-->
+    <input id="hdfCatId" type="hidden" />
+    <div class="mainCategory">
+    </div>
+    <!--북마크섹션 끝-->
+  </div>
+  <div id="divCategory">
+    <span class="title">이름</span><input id="txtCategoryName" type="text" class="textbox" />
+    <span class="title">순서</span><input id="txtCategorySort" type="text" class="textbox" />
+  </div>
+  <div id="divEditSite">
+    <table style="width:100%;">
+      <tr>
+        <td style="width:140px">
+          <span class="title">카테고리</span>
+        </td>
+        <td>
+          <select id="ddlCategory" name="category_idx">
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <span class="title">ID</span>
+        </td>
+        <td>
+          <input id="txtSiteIdx" name="site_idx" type="text" class="textbox disabled" readonly="readonly" />
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <span class="title">이름</span>
+        </td>
+        <td>
+          <input id="txtSiteName" name="name" type="text" class="textbox" />
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <span class="title">URL</span>
+        </td>
+        <td>
+          <input id="txtSiteUrl" name="url" type="text" class="textbox" />
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <span class="title">URL MOBILE</span>
+        </td>
+        <td>
+          <input id="txtSiteUrlMobile" name="url_mobile" type="text" class="textbox" />
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <span class="title">순서</span>
+        </td>
+        <td>
+          <input id="txtSiteSort" name="sort" type="text" class="textbox" />
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <span class="title">사용</span>
+        </td>
+        <td>
+          <select id="ddlUseYN" name="use_yn">
+            <option value="Y" selected="selected">사용</option>
+            <option value="N">사용안함</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <td></td>
+        <td style="text-align:right">
+          <span style="cursor:pointer;" onclick="AddSiteInfo()">[신규]</span>
+          <span style="cursor:pointer;" onclick="SaveSiteInfo()">[저장]</span>
+          <span style="cursor:pointer" onclick="HideEditSiteArea()">[닫기]</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+
+</html>
